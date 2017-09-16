@@ -30,28 +30,37 @@ class API(object):
                 api_key = line.split(": ")[1]
 
         return api_key    
-        
-    def search(self, query, page=1, count=1):
-        """Return a list of recipes from the Food2Fork.com database"""                        
-        assert(0 < count <= 30), 'max 30 results per call, min 1' #https://github.com/davebshow/food2forkclient/
-        
-        # Format the request URI
-        query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}
-        api_request = self._API_URI + "search?" + urlencode(query_params)
+    
+    def _make_api_request(self, api_request):
+        """Make an API request to the Food2Fork API"""                
         
         # Make the request
         request = urllib2.Request(api_request, headers=self._HEADER)
         response = urllib2.urlopen(request)
-        raw = response.read()        
-        json_obj = json.loads(raw)['recipes']
-
-        if len(json_obj) == 1:
-            json_obj = json_obj[0]
+        raw = response.read()
         
+        request_type = api_request.split('/api/')[1].split('?')[0]
+        if request_type == 'search':
+            json_obj = json.loads(raw)['recipes']
+        elif request_type == 'get':
+            json_obj = json.loads(raw)['recipe']        
+            
         return json_obj
-
     
-    def get_recipe(self, recipe_id):
+        
+    def _api_search(self, query, count=1):
+        """Return a list of recipes from the Food2Fork.com database"""                        
+        assert(0 < count <= 30), 'max 30 results per call, min 1' #https://github.com/davebshow/food2forkclient/
+        
+        # Format the request URI
+        page = 1
+        query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}
+        api_request = self._API_URI + "search?" + urlencode(query_params)
+        
+        # Make the request
+        return self._make_api_request(api_request)
+    
+    def _api_get_recipe(self, recipe_id):
         """Get a specific recipe object from Food2Fork.com"""
         
         # Format the request URI
@@ -59,12 +68,11 @@ class API(object):
         api_request = self._API_URI + "get?" + urlencode(query_params)
         
         # Make the request
-        request = urllib2.Request(api_request, headers=self._HEADER)
-        response = urllib2.urlopen(request)
-        raw = response.read()        
-        json_obj = json.loads(raw)['recipe']
-
-        if len(json_obj) == 1:
-            json_obj = json_obj[0]
+        return self._make_api_request(api_request)
+    
+    def search(self, search_term, count=1):
+        """Return a list of recipe json objects from Food2Fork"""
         
-        return json_obj
+        search_result = self._api_search(search_term, count)        
+                
+        return [self._api_get_recipe(r['recipe_id']) for r in search_result]                
