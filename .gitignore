@@ -1,0 +1,15 @@
+# OS x
+*.DS_Store
+
+# API credentials
+secrets.txt
+*.txt
+
+# Jupyter
+/Notebooks
+.ipynb_checkpoints
+
+# Compiled python modules
+*.pyc
+
+ 
