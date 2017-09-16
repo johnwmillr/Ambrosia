@@ -24,7 +24,7 @@ class API(object):
 
     def _load_credentials(self):
         """Load the Food2Fork.com API credentials"""
-        lines = [str(line.rstrip('\n')) for line in open('../secrets.txt')]
+        lines = [str(line.rstrip('\n')) for line in open('secrets.txt')]
         for line in lines:
             if "api_key" in line:
                 api_key = line.split(": ")[1]
