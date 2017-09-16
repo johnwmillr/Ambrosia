@@ -6,7 +6,6 @@
 """A food library"""
 
 from __future__ import print_function
-
 import requests
 import urllib2
 from urllib import urlencode
@@ -36,16 +35,36 @@ class API(object):
         """Return a list of recipes from the Food2Fork.com database"""                        
         assert(0 < count <= 30), 'max 30 results per call, min 1' #https://github.com/davebshow/food2forkclient/
         
-        # Format the Request URI
+        # Format the request URI
         query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}
         api_request = self._API_URI + "search?" + urlencode(query_params)
         
         # Make the request
         request = urllib2.Request(api_request, headers=self._HEADER)
         response = urllib2.urlopen(request)
-        raw = response.read()
+        raw = response.read()        
+        json_obj = json.loads(raw)['recipes']
+
+        if len(json_obj) == 1:
+            json_obj = json_obj[0]
+        
+        return json_obj
+
+    
+    def get_recipe(self, recipe_id):
+        """Get a specific recipe object from Food2Fork.com"""
+        
+        # Format the request URI
+        query_params = {"key":self._API_KEY, "rId":recipe_id}
+        api_request = self._API_URI + "get?" + urlencode(query_params)
         
         # Make the request
-        json_obj = json.loads(raw)
+        request = urllib2.Request(api_request, headers=self._HEADER)
+        response = urllib2.urlopen(request)
+        raw = response.read()        
+        json_obj = json.loads(raw)['recipe']
+
+        if len(json_obj) == 1:
+            json_obj = json_obj[0]
         
-        return json_obj['recipes']
+        return json_obj
