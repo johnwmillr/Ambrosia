@@ -5,14 +5,78 @@
 
 """A food library"""
 
-from __future__ import print_function
+from ingredients_parser.en import parse
 
+# Parsing ingredient lists
+import re
+import nltk
+from fractions import Fraction
 
-class parser(object):
+class Ingredient(object):
+    
+    def __init__(self, name, amount='', units='', description=''):
+        self._name = name # e.g. butter, sugar, etc. (this needs a better variable name than "name")        
+        self._amount = amount # How many of units?
+        self._units = units   # Measurement units (e.g. cup, tablespoon, pound, etc.)
+        self._description = description # e.g. softened, blackened, etc.
+                
+    @property
+    def name(self): # e.g. butter, chocolate chips, ground beef
+        return self._name
+
+    @property
+    def units(self): # e.g. cups, teaspoons, oz
+        return self._units
+    
+    @property
+    def amount(self): # e.g. 1, 2, 1 1/2, 3/4
+        return self._amount    
+    
+    @property
+    def description(self): # e.g. softened, lightly-packed
+        return self._description
+    
+    def __repr__(self):        
+        return repr((self.amount, self.units, self.name))
+
+class Parser(object):
     """Ambrosia Ingredient parser"""
 
     def __init__(self):
         data_loc="../data"
+
+    def parseIngredients(self, ingredients):
+        """Take a list of ingredient strings and parse their values"""
+        p = [parse(ingrd) for ingrd in ingredients]
+        num_ingredients = len(p)
+
+        # Use RegEx to get ingredient amount from parsed list
+        expr = r'\d*\s*\d*((/|.)\d+)?'
+        matches = [re.search(expr,ingrd['measure']) for ingrd in p]
+        amounts = [match.group().strip() for match in matches]
+
+        # Convert amounts to float
+        amounts = [float(sum(Fraction(s) for s in a.split())) for a in amounts]
+
+        # Get measurement unit from the RegEx matches
+        units = [i['measure'][m.end():].strip() for i,m in zip(p,matches)]
+
+        # Get parts of speech using NLTK
+        pos = [nltk.pos_tag(nltk.word_tokenize(ingrd['name'])) for ingrd in p]
+
+        # Ingredient names
+        tags = ['NN','NNS','VBG'] #JJ also?
+        names = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
+
+        # Ingredient descriptions
+        tags = ['JJ','VBD']
+        descriptions = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
+                        
+        return [Ingredient(n,a,u,d) for a,u,n,d in zip(amounts,units,names,descriptions)]
+
+
+
+
         
 
 
