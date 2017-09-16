@@ -12,7 +12,11 @@ import re
 import nltk
 from fractions import Fraction
 
+from nltk.corpus import wordnet as wn
+
+
 class Ingredient(object):
+
     
     def __init__(self, name, amount='', units='', description=''):
         self._name = name # e.g. butter, sugar, etc. (this needs a better variable name than "name")        
@@ -45,6 +49,13 @@ class Parser(object):
     def __init__(self):
         data_loc="../data"
 
+    def get_all_ingredients(self):
+        food = wn.synset('food.n.02')
+        foodList = list(set([w for s in food.closure(lambda s: s.hyponyms()) for w in s.lemma_names()]))
+        foodList.sort();
+        for ingredient in foodList:
+            ingredient=ingredient.replace("_", " ")
+        return foodList
     def parseIngredients(self, ingredients):
         """Take a list of ingredient strings and parse their values"""
         p = [parse(ingrd) for ingrd in ingredients]
