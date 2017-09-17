@@ -65,10 +65,21 @@ class Parser(object):
         num_ingredients = len(p)
 
         # Use RegEx to get ingredient amount from parsed list
-        expr = r'\d*\s*\d*((/|.)\d+)?'
+        expr = r'\d*\s*\d*((/|.|,)\d+)?'
         matches = [re.search(expr,ingrd['measure']) for ingrd in p]
-        amounts = [match.group().strip() for match in matches]
+        amounts = [match.group().strip().encode('ascii','ignore') for match in matches]            
+        amounts = [a.replace(',','.') for a in amounts]        
 
+        # Check for ill-formatted amounts (e.g. "1 /2")
+        amt = []
+        for a in amounts:
+            m = re.search(r'\A\d?\s{1,3}/\d?',a)
+            if m != None:                                
+                amt.append(m.group().replace(' ',''))
+            else:
+                amt.append(a)
+        amounts = amt
+    
         # Convert amounts to float
         amounts = [float(sum(Fraction(s) for s in a.split())) for a in amounts]
 
