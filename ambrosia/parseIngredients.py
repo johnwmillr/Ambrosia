@@ -457,7 +457,6 @@ allIngredientsFile = open("allIngredients.txt", "r")
 allIngredients = allIngredientsFile.read().split("\n")
 allIngredientsFile.close()
 
-
 #
 # get ingredients
 #
@@ -564,18 +563,19 @@ def getIngredients(ingredientObjects):
 					break
 
 		# check if first word in array is "or", then ingredient has 2 possible units
-		if "or" in parsedIngredient:
-			parsedIngredient = parsedIngredient[:parsedIngredient.index('or')]
 
-		if parsedIngredient[0] == "or":		
-			pluralUnit = inCheckingPlurals(parsedIngredient[1], measurementUnits)
-			if pluralUnit:
-				unitString += " " + parsedIngredient[0] + " " + pluralUnit
-				parsedIngredient = parsedIngredient[2:]
-
-		# delete "of" at first index, ie "1 cup of milk" -> "1 cup milk"
-		if parsedIngredient[0] == "of":
-			del parsedIngredient[0]
+		if len(parsedIngredient) >0:
+			
+			if parsedIngredient[0] == "or":		
+				pluralUnit = inCheckingPlurals(parsedIngredient[1], measurementUnits)
+				if pluralUnit:
+					unitString += " " + parsedIngredient[0] + " " + pluralUnit
+					parsedIngredient = parsedIngredient[2:]					
+			elif "or" in parsedIngredient:
+				parsedIngredient = parsedIngredient[:parsedIngredient.index('or')]			
+			elif parsedIngredient[0] == "of":
+				# delete "of" at first index, ie "1 cup of milk" -> "1 cup milk"
+				del parsedIngredient[0]
 
 		ingredient["unit"] = unitString
 

@@ -14,6 +14,8 @@ from fractions import Fraction
 
 from nltk.corpus import wordnet as wn
 
+import ambrosia.parseIngredients as PI
+
 
 class Ingredient(object):
 
@@ -56,6 +58,7 @@ class Parser(object):
         for ingredient in foodList:
             ingredient=ingredient.replace("_", " ")
         return foodList
+    
     def parseIngredients(self, ingredients):
         """Take a list of ingredient strings and parse their values"""
         p = [parse(ingrd) for ingrd in ingredients]
@@ -72,16 +75,22 @@ class Parser(object):
         # Get measurement unit from the RegEx matches
         units = [i['measure'][m.end():].strip() for i,m in zip(p,matches)]
 
+        # Use kbrokahn's parser method (which we modified)
+        parsed_ingrds = PI.getIngredients(ingredients)
+        names = [ingrd['ingredient'] for ingrd in parsed_ingrds]
+
+        descriptions = [ingrd['descriptions'] for ingrd in parsed_ingrds]
+
         # Get parts of speech using NLTK
-        pos = [nltk.pos_tag(nltk.word_tokenize(ingrd['name'])) for ingrd in p]
+        # pos = [nltk.pos_tag(nltk.word_tokenize(ingrd['name'])) for ingrd in p]
 
         # Ingredient names
-        tags = ['NN','NNS','VBG'] #JJ also?
-        names = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
+        # tags = ['NN','NNS','VBG'] #JJ also?
+        # names = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
 
         # Ingredient descriptions
-        tags = ['JJ','VBD']
-        descriptions = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
+        # tags = ['JJ','VBD']
+        # descriptions = [' '.join([part[0] for part in parts if part[1] in tags]) for parts in pos]
                         
         return [Ingredient(n,a,u,d) for a,u,n,d in zip(amounts,units,names,descriptions)]
 
