@@ -15,4 +15,6 @@ secrets.txt
 
 #project file
 .idea
+# Data
+output.csv
  
