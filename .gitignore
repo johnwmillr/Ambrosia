@@ -18,3 +18,4 @@ secrets.txt
 .idea
  
 /data
+*.csv
