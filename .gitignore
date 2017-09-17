@@ -4,6 +4,7 @@
 # API credentials
 secrets.txt
 *.txt
+*.json
 
 # Jupyter
 /Notebooks
