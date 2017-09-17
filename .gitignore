@@ -17,4 +17,4 @@ secrets.txt
 .idea
 # Data
 output.csv
- 
+/ambrosia/data 
