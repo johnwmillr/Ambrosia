@@ -4,6 +4,7 @@
 # API credentials
 secrets.txt
 *.txt
+*.json
 
 # Jupyter
 /Notebooks
@@ -16,6 +17,6 @@ secrets.txt
 
 #project file
 .idea
-# Data
-output.csv
-/ambrosia/data 
+#Data
+/ambrosia/data
+*.csv

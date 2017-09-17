@@ -7,4 +7,9 @@
 
 __author__ = "Ahmed Elmaleh, John W. Miller, and Qingyang Su"
 
+<<<<<<< HEAD
 from ambrosia.api import API
+=======
+from ambrosia.ingredients_parser.en import parse # https://pypi.python.org/pypi/ingredient-parser/1.0.1
+from ambrosia.parser import Parser
+>>>>>>> ingredient_parser
