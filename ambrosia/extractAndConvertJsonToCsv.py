@@ -1,36 +1,55 @@
 # Extract the recipes.json data from here: https://github.com/kbrohkahn/recipe-parser
 
 import json
-import random
 import math
 import csv
 import string
+import urllib2
+import re
+from bs4 import BeautifulSoup
 
 # Load in the huge json file as a list of many json objects
 # recipes = [json.loads(str(line.rstrip('\n'))) for line in open('recipes.txt')] 
 
+def getAllRecipesRating(recipe_id):
+    url = "http://allrecipes.com/recipe/" + str(recipe_id)
+    soup = BeautifulSoup(urllib2.urlopen(url).read(),'lxml')
+    html_snippet = str(soup.find("section",{"class":"recipe-summary clearfix"}).find("meta"))    
+    rating = float(re.search('="\d\.\d*"',html_snippet).group().split('"')[1])
+    
+    return rating
+
 def extractUsefulRecipeData(recipes):    
-    ingredientNames = []
-    newObj = []        
-    count = 0
+    newObj, allIngredients, allRatings = [],[],[]
+    count = 0; print(count)
     for recipe in recipes: # Iterate through all recipes        
         count += 1
         if count%100==0:
             print(count)
 
+        # Get the recipe rating        
+        rating = getAllRecipesRating(recipe['id'])        
+        allRatings.append(rating)
+
         recipeName = recipe['name'].replace(' ','_').encode('ascii', 'ignore').lower().translate(None, string.punctuation)
-        tempObj = {'name': recipeName, 'ingredients': [], 'rating': math.ceil(10*random.random())}
+        tempObj = {'name': recipeName, 'ingredients': [], 'rating': rating}
 
         for ingredient in recipe['ingredients']: # Iterate through ingredients in current recipe                        
             d = {key: ingredient[key] for key in ingredient if key in ['amount','unit','ingredient']}                                        
             d['ingredient'] = d['ingredient'].encode('ascii', 'ignore').lower()
             tempObj['ingredients'].append(d)
 
-            ingredientNames = ingredientNames + [d['ingredient']]
+            allIngredients = allIngredients + [d['ingredient']]
                         
         newObj = newObj + [tempObj]        
 
-    return newObj, ingredientNames
+    # Normalize the ratings    
+    allRatings = [10*((float(i)-min(allRatings))/(max(allRatings)-min(allRatings))) for i in allRatings]
+
+    # Only keep the unique ingredient names
+    allIngredients = list(set(allIngredients))
+
+    return newObj, allIngredients, allRatings
 
 def writeJsonToCsv(jsonObj, featureNames):    
     # Write the first row of the csv file
@@ -42,11 +61,12 @@ def writeJsonToCsv(jsonObj, featureNames):
     d = {key: featureNames.index(key)+1 for key in featureNames}
     n_features = len(featureNames)
 
+    count = 0
     with open("recipes_data.csv",'wb') as resultFile:
         wr = csv.writer(resultFile, dialect='excel')
         wr.writerow(featureNames)        
         for recipe in jsonObj:
-            if count%100==0:
+            if count%100==0 or count==0:
                 print(count)
                 
             recipeDataRow = [0]*(n_features+2)
