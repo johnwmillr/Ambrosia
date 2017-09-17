@@ -13,4 +13,6 @@ secrets.txt
 # Compiled python modules
 *.pyc
 
+# Data
+output.csv
  
