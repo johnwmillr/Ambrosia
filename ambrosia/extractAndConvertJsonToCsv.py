@@ -24,8 +24,8 @@ def getAllRecipesRating(recipe_id):
 
 def extractUsefulRecipeData(recipes):    
     newObj, allIngredients, allRatings = [],[],[]
-    count = 0; print(count)
-    for recipe in recipes: # Iterate through all recipes        
+    count = 0; print(count)    
+    for recipe in recipes: # Iterate through all recipes                
         count += 1
         if count%100==0:
             print(count)
@@ -79,7 +79,7 @@ def writeJsonToCsv(jsonObj, featureNames):
     n_features = len(featureNames)    
 
     count = 0    
-    with open("recipes_data_trimmed_features.csv",'wb') as resultFile:
+    with open("recipes_data_trimmed_features_15000.csv",'wb') as resultFile:
         wr = csv.writer(resultFile, dialect='excel')
         wr.writerow(featureNames)        
         for n in jsonObj:
