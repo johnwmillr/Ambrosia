@@ -23,5 +23,5 @@ secrets.txt
 
 # NYT
 build/
-tmp/*
-log/*
+tmp/
+log/
