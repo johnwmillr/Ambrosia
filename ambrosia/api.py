@@ -28,6 +28,7 @@ class API(object):
         for line in lines:
             if "api_key" in line:
                 api_key = line.split(": ")[1]
+                break
 
         return api_key    
     
@@ -40,6 +41,9 @@ class API(object):
         raw = response.read()
         
         request_type = api_request.split('/api/')[1].split('?')[0]
+        print('\n*************')
+        print(raw)
+        print('\n*************')        
         if request_type == 'search':
             json_obj = json.loads(raw)['recipes']
         elif request_type == 'get':
@@ -50,15 +54,31 @@ class API(object):
         
     def _api_search(self, query, count=1):
         """Return a list of recipes from the Food2Fork.com database"""                        
-        assert(0 < count <= 30), 'max 30 results per call, min 1' #https://github.com/davebshow/food2forkclient/
-        
-        # Format the request URI
+        # assert(0 < count <= 30), 'max 30 results per call, min 1' #https://github.com/davebshow/food2forkclient/
+                
         page = 1
-        query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}
-        api_request = self._API_URI + "search?" + urlencode(query_params)
-        
-        # Make the request
-        return self._make_api_request(api_request)
+        all_responses = []
+        if count > 30:            
+            while count > 30:
+                # Format the request URI
+                query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}#, "sort":"t"}
+                api_request = self._API_URI + "search?" + urlencode(query_params)
+                all_responses.append(self._make_api_request(api_request))
+                page += 1
+                count -= 30
+            query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}#, "sort":"t"}
+            api_request = self._API_URI + "search?" + urlencode(query_params)
+            all_responses.append(self._make_api_request(api_request))
+
+            return all_responses[0]
+        else:
+            page = 1
+            # Format the request URI
+            query_params = {"key":self._API_KEY, "q":query, "page":page, "count":count}#, "sort":"t"}
+            api_request = self._API_URI + "search?" + urlencode(query_params)            
+            # Make the request
+            return self._make_api_request(api_request)
+       
     
     def _api_get_recipe(self, recipe_id):
         """Get a specific recipe object from Food2Fork.com"""
