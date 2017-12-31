@@ -20,3 +20,8 @@ secrets.txt
 #Data
 /ambrosia/data
 *.csv
+
+# NYT
+build/
+tmp/*
+log/*
