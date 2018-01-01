@@ -1,6 +1,7 @@
 import sys
 import ambrosia
 from NYT.parseIngredientList import parseIngredientList
+from ambrosia import yummly
 
 api = ambrosia.API()
 
