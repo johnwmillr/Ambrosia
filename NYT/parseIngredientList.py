@@ -12,6 +12,36 @@ from ingredient_phrase_tagger.training import utils
 from ambrosia.parser import Parser
 P = Parser()
 
+def replaceFractions(s):
+    s_in = s
+
+    FRACTIONS = {
+    u'½': u' 1/2',
+    u'⅓': u' 1/3', 
+    u'⅔': u' 2/3', 
+    u'¼': u' 1/4', 
+    u'¾': u' 3/4', 
+    u'⅕': u' 1/5', 
+    u'⅖': u' 2/5', 
+    u'⅗': u' 3/5', 
+    u'⅘': u' 4/5', 
+    u'⅙': u' 1/6', 
+    u'⅚': u' 5/6', 
+    u'⅐': u' 1/7',
+    u'⅛': u' 1/8', 
+    u'⅜': u' 3/8', 
+    u'⅝': u' 5/8', 
+    u'⅞': u' 7/8', 
+    u'⅑': u' 1/9',
+    u'⅒': u' 1/10'
+    }
+
+    for k in FRACTIONS:
+        if k in s:
+            s = s.replace(k, FRACTIONS[k]).strip(' ')
+
+    return s
+
 def parseIngredientList(ingredients):
     """ingredients is a list of ingredients and descriptions from a recipe"""
 
@@ -32,13 +62,8 @@ def parseIngredientList(ingredients):
         with open(ingredientFile,'w') as outfile:
             for item in ingredients:
                 # Unicode kludge
+                item = replaceFractions(item)
                 line = str(item.encode("utf-8", errors='ignore').decode("utf-8") + "\n")
-                line = line.replace('½', ' 0.5').strip(' ')
-                line = line.replace('⅓', ' 1/3').strip(' ')            
-                line = line.replace('⅔', ' 2/3').strip(' ')
-                line = line.replace('¼', ' 0.25').strip(' ')            
-                line = line.replace('¾', ' 0.75').strip(' ')                        
-                # print(line)
                 outfile.writelines(line)
 
         # Use the trained model to predict tags for the list of ingredients
@@ -59,7 +84,7 @@ def parseIngredientList(ingredients):
             if i in one_thirds:
                 json_obj[i]['qty'] = '1/3'
     except:
-        print(sys.exc_info()[0])
+        print((sys.exc_info()[0], sys.exc_info()[1]))
         json_obj = []
 
     return json_obj

@@ -37,24 +37,26 @@ def main(search_term, num=1):
     search = client.search(search_term)#, maxResults=num)#, start=1)
 
     allRecipes = pd.DataFrame()
-    num_matches,num_skips = 0,0
+    num_matches, num_skips = 0,0
     for match in search.matches:
         num_matches += 1
-        try:
-            current_ingredients = []
-            recipe = client.recipe(match.id)
-            print('\n*************************\n' + recipe['name'])
+        current_ingredients = []
+        try: # Due to dumb fraction errors        
+            recipe = client.recipe(match.id)            
             data = parseIngredientList(recipe['ingredientLines'])
-
-            quantities = []
+            quantities = []        
             for item in data:
                 assert item['name']!='', "An item needs a name."
 
                 # Divide by number of servings (if possible)
                 if item['qty'] != '' and isnumeric(recipe['numberOfServings']):
-                    amount = float(Fraction(item['qty']))
-                    quantities.append(amount/recipe['numberOfServings'])
-                    amount = str(amount/recipe['numberOfServings']) + ' ' + item['unit']
+                    try:
+                        # amount = float(Fraction(item['qty']))
+                        amount = sum([float(Fraction(f)) for f in item['qty'].split()])
+                        quantities.append(amount/recipe['numberOfServings'])
+                        amount = str(amount/recipe['numberOfServings']) + ' ' + item['unit']
+                    except:
+                        quantities.append('unit')
                 else:
                     quantities.append('unit')
 
@@ -62,17 +64,23 @@ def main(search_term, num=1):
                 current_ingredients.append(item['name'])
 
             # Make a data frame from the current recipe
-            DF = pd.DataFrame(np.array(quantities).reshape((1,len(current_ingredients))),columns=current_ingredients)
-            print(quantities)
-            print(current_ingredients)
-            print(DF)                
+            DF = pd.DataFrame(np.array(quantities).reshape((1,len(current_ingredients))),columns=current_ingredients)        
+            print('\n*************************\n' + recipe['name'])
+            print(DF)
+            DF.insert(0,'Title',recipe['name'])
             allRecipes = pd.concat([allRecipes,DF], axis=0, ignore_index=True)                
-        except:
-            num_skips += 1
-            
-        # Continually wite to the .csv file
-        allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)
 
+            # Continually wite to the .csv file
+            allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)
+        except:
+            print('\n-------------------------\n')
+            print((sys.exc_info()[0], sys.exc_info()[1]))
+            # print(data)
+            # for item in data:
+                # print(item['input'])
+            num_skips += 1
+            # print('--------------------\n' + recipe['name'])
+            
     print("\nYou downloaded {0} recipes in total and skipped {1}, i.e. {2} skip rate.".format(num_matches, num_skips, num_skips/float(num_matches)))
     
 def add_commas(*args):
