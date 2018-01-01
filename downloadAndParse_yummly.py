@@ -1,5 +1,7 @@
 import sys
 from fractions import Fraction
+import pandas as pd
+import numpy as np
 # import ambrosia
 from NYT.parseIngredientList import parseIngredientList
 from ambrosia import yummly
@@ -18,6 +20,12 @@ def load_credentials():
 
     return api_key, api_id
 
+def isnumeric(val):
+    if isinstance(val, int) or isinstance(val, float):
+        return True
+    else:
+        return False
+
 def main(search_term, num=1):
     # default option values
     TIMEOUT = 5.0
@@ -28,51 +36,45 @@ def main(search_term, num=1):
     client = Client(api_id=ID, api_key=key, timeout=TIMEOUT, retries=RETRIES)
     search = client.search(search_term)#, maxResults=num)#, start=1)
 
-    filename = 'parsed_ingredients.txt'
-    all_ingredients = []
+    allRecipes = pd.DataFrame()
+    num_matches,num_skips = 0,0
+    for match in search.matches:
+        num_matches += 1
+        try:
+            current_ingredients = []
+            recipe = client.recipe(match.id)
+            print('\n*************************\n' + recipe['name'])
+            data = parseIngredientList(recipe['ingredientLines'])
 
-    with open(filename,'w') as outfile:
-        # for recipe in recipes:
-        for match in search.matches:
-            try:
-                recipe = client.recipe(match.id)            
-                print('\n*************************\n' + recipe['name'])
-                outfile.write('\n')
-                data = parseIngredientList(recipe['ingredientLines'])
+            quantities = []
+            for item in data:
+                assert item['name']!='', "An item needs a name."
 
-                row1, row2 = '',''
-                for item in data:
-                    row1 = row1 + item['name'] + ','
-                    # try:
+                # Divide by number of servings (if possible)
+                if item['qty'] != '' and isnumeric(recipe['numberOfServings']):
                     amount = float(Fraction(item['qty']))
-                    row2 = row2 + str(amount/recipe['numberOfServings']) + ' ' + item['unit'] + ','
-                    # except:
-                        # row2 = row2 + item['qty'] + ' ' + item['unit'] + ','
+                    quantities.append(amount/recipe['numberOfServings'])
+                    amount = str(amount/recipe['numberOfServings']) + ' ' + item['unit']
+                else:
+                    quantities.append('unit')
 
-                print(row1)
-                print(row2)
-                outfile.write(row1+'\n')
-                outfile.write(row2+'\n')
-            except:
-                pass
+                item['name'] = item['name'].lower()
+                current_ingredients.append(item['name'])
 
-            # for item in data:
-            #     row = add_commas(recipe['name'],recipe['rating'],item['qty'],item['unit'],item['name'])
-            #     outfile.write(row+'\n')
-            #     # print(row+'\n')
+            # Make a data frame from the current recipe
+            DF = pd.DataFrame(np.array(quantities).reshape((1,len(current_ingredients))),columns=current_ingredients)
+            print(quantities)
+            print(current_ingredients)
+            print(DF)                
+            allRecipes = pd.concat([allRecipes,DF], axis=0, ignore_index=True)                
+        except:
+            num_skips += 1
+            
+        # Continually wite to the .csv file
+        allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)
 
-            #     if item['name'] not in all_ingredients:            
-            #         all_ingredients.append(item['name'])
-
-            # parsedIngredients = [(item['qty'], item['unit'], item['name']) for item in data]            
-            # for i,item in enumerate(parsedIngredients):
-            #     print('\n' + str(data[i]['input']) + ' --- ' + str(item))
-
-    # all_ingredients.sort()
-    # for item in all_ingredients:
-    #     print(str(item) + '\n')
-
-
+    print("\nYou downloaded {0} recipes in total and skipped {1}, i.e. {2} skip rate.".format(num_matches, num_skips, num_skips/float(num_matches)))
+    
 def add_commas(*args):
     str_with_commas = args[0]
     for arg in args[1:]:

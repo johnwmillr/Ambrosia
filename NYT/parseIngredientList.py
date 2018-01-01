@@ -38,7 +38,7 @@ def parseIngredientList(ingredients):
                 line = line.replace('⅔', ' 2/3').strip(' ')
                 line = line.replace('¼', ' 0.25').strip(' ')            
                 line = line.replace('¾', ' 0.75').strip(' ')                        
-                print(line)
+                # print(line)
                 outfile.writelines(line)
 
         # Use the trained model to predict tags for the list of ingredients
