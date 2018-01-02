@@ -32,18 +32,21 @@ def ingredientKludges(s):
     s = re.sub('^bananas$','banana',s)
 
     patterns = [
+        '\s?\d{1,2}$', # 'bananas 2'
         '^t\s{1}', # "t honey"
         '\s?\d\/\d\scups?$', # "coffee 1/2 cup"
         '^\s*\d{1,2}-\d{1,2}\s?', # "1-2 dates"
-        '\s*\d\%\s*(low-?\s?fat)?\s*', # "1% low fat milk"
+        '\s*\d{1,3}\%\s*(low-?\s?fat)?\s*', # "1% low fat milk"
         '\s*(\d\%)?\s?(low-?\s?fat)\s?', # "low fat milk"
         '^\d{1}/\d{1,2}-?\d{0,2}\s?', # "1/2-1 banana"
         'peeled'
         '(^c\.?\s?)|(^cups\s?)', # 'c coconut milk'
-        '^c.',
+        '^c\.',
         '^c\s{1}',
-        '(^tbsp\s)|(^t\.?\s)', # 'tbsp honey'
-        '(^tsp\s)', # 'tsp honey'
+        '(^tbsp\s(of)?\s?)|(^t\.?\s(of)?\s?)', # 'tbsp honey'
+        '(^tsp\s(of)?\s?)', # 'tsp honey'
+        '\s{1}cups?\s?$', # 'milk cup'
+        '^a\s', # 'a banana'
     ]
 
     s_in = s
@@ -52,6 +55,8 @@ def ingredientKludges(s):
         if s_in != s:
             print(s_in + ' --- ' + s + ' --- ' + ptr)
             s_in = s
+
+    s = s.strip()
 
     return s
 
@@ -65,68 +70,82 @@ def main(search_term, num_per_page=1, max_recipes=10):
     client = Client(api_id=ID, api_key=key, timeout=TIMEOUT, retries=RETRIES)
     search = client.search(search_term)
     total_possible_matches = search.totalMatchCount
+    max_recipes = min(max_recipes, total_possible_matches)
 
     page_num = 1
+    fail_count = 0
     num_matches, num_skips = 0,0
     allRecipes = pd.DataFrame()
-    while num_matches < total_possible_matches and num_matches < max_recipes:
-        search_results = client.search(search_term, maxResults=num_per_page, start=page_num)
-        
-        for match in search_results.matches:
-            num_matches += 1
-            current_ingredients = []
-            try: # Due to dumb fraction errors        
-                recipe = client.recipe(match.id)            
-                data = parseIngredientList(recipe['ingredientLines'])
-                quantities = []        
-                for item in data:
-                    assert item['name']!='', "An item needs a name."
+    while num_matches < max_recipes and fail_count < max_recipes:
+        search_results = client.search(search_term, maxResults=num_per_page, start=page_num)        
 
-                    # Divide by number of servings (if possible)
-                    if item['qty'] != '' and isnumeric(recipe['numberOfServings']):
-                        try:
-                            # amount = float(Fraction(item['qty']))
-                            amount = sum([float(Fraction(f)) for f in item['qty'].split()])
-                            quantities.append(amount/recipe['numberOfServings'])
-                            # amount = str(amount/recipe['numberOfServings']) + ' ' + item['unit']
-                        except:
+        try:
+            for match in search_results.matches:
+                num_matches += 1
+                current_ingredients = []
+                try: # Due to dumb fraction errors        
+                    recipe = client.recipe(match.id)            
+                    data = parseIngredientList(recipe['ingredientLines'])
+                    quantities = []        
+                    for item in data:
+                        assert item['name']!='', "An item needs a name."
+
+                        # Divide by number of servings (if possible)
+                        if item['qty'] != '' and isnumeric(recipe['numberOfServings']):
+                            try:
+                                # amount = float(Fraction(item['qty']))
+                                amount = sum([float(Fraction(f)) for f in item['qty'].split()])
+                                quantities.append(amount/recipe['numberOfServings'])
+                                # amount = str(amount/recipe['numberOfServings']) + ' ' + item['unit']
+                            except:
+                                # quantities.append('unit')
+                                quantities.append(1)
+                        else:
                             # quantities.append('unit')
                             quantities.append(1)
-                    else:
-                        # quantities.append('unit')
-                        quantities.append(1)
 
-                    item['name'] = item['name'].lower()
+                        item['name'] = item['name'].lower()
 
-                    # Kludges
-                    item['name'] = ingredientKludges(item['name'])
+                        # Kludges
+                        item['name'] = ingredientKludges(item['name'])
 
-                    current_ingredients.append(item['name'])
+                        current_ingredients.append(item['name'])
 
-                # Make a data frame from the current recipe
-                DF = pd.DataFrame(np.array(quantities).reshape((1,len(current_ingredients))),columns=current_ingredients)        
-                print('\n*************************\n' + recipe['name'])
-                # print(DF)
-                DF.insert(0,'Rating',recipe['rating'])
-                DF.insert(0,'Title',recipe['name'])
-                allRecipes = pd.concat([allRecipes,DF], axis=0, ignore_index=True)                
+                    # Make a data frame from the current recipe
+                    counter = " {0}/{1}\n".format(allRecipes.shape[0],max_recipes)
+                    print('\n*************************' + counter + recipe['name'])
+                    DF = pd.DataFrame(np.array(quantities).reshape((1,len(current_ingredients))),columns=current_ingredients)        
+                    DF.insert(0,'Rating',recipe['rating'])                
+                    DF.insert(0,'Salty',recipe['flavors']['salty'])
+                    DF.insert(0,'Sweet',recipe['flavors']['sweet'])                    
+                    DF.insert(0,'Bitter',recipe['flavors']['bitter'])                                                                                
+                    print(DF)                
+                    DF.insert(0,'RecipeID',match.id)
+                    DF.insert(0,'URL',recipe['attribution']['url'])
+                    DF.insert(0,'Title',recipe['name'])
+                    allRecipes = pd.concat([allRecipes,DF], axis=0, ignore_index=True)                
 
-                # Continually wite to the .csv file
-                allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)
-            except:
-                print('\n-------------------------\n')
-                print((sys.exc_info()[0], sys.exc_info()[1]))
-                # print(data)
-                # for item in data:
-                    # print(item['input'])
-                num_skips += 1
-                # print('--------------------\n' + recipe['name'])
+                    # Continually wite to the .csv file
+                    allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)
+                except:
+                    print('\n-------------------------\n')
+                    print((sys.exc_info()[0], sys.exc_info()[1]))
+                    # print(data)
+                    # for item in data:
+                        # print(item['input'])
+                    num_skips += 1
+                    # print('--------------------\n' + recipe['name'])
 
-            if allRecipes.shape[0] > max_recipes:
-                break
-              
-        page_num += num_per_page  
-        print("\nYou downloaded {0} recipes in total and skipped {1}, i.e. {2} skip rate. You saved {3} recipes.".format(num_matches, num_skips, num_skips/float(num_matches),allRecipes.shape[0]))
+                if allRecipes.shape[0] > max_recipes:
+                    break
+                  
+            page_num += num_per_page  
+            print("\nYou downloaded {0} recipes in total and skipped {1}, i.e. {2} skip rate. You saved {3} recipes.".format(num_matches, num_skips, num_skips/float(num_matches),allRecipes.shape[0]))
+
+            allRecipes.to_csv("allRecipes.csv",mode='w',na_rep=0)        
+        except:
+            fail_count += 1
+            pass
                 
 def add_commas(*args):
     str_with_commas = args[0]
